@@ -68,7 +68,6 @@ module.exports = function (withKeys){
               return false;
 
           } catch (ouch) {
-            console.log(ouch);
             return false;
           }
 
@@ -86,8 +85,11 @@ module.exports = function (withKeys){
   
   
     if (withKeys) {
-      importKeys.keys(withKeys);
-      lockdown();
+      if (importKeys.keys(withKeys)) {
+         lockdown();
+      } else {
+         return null;
+      }
     } else {
 
       // create keys ready to use
