@@ -132,15 +132,30 @@ module.exports = function (withKeys){
       try {
         const payload = JSON.parse(json);
         if (Array.isArray(payload) && payload.length===1) {
-          const encryptedData = Buffer.from(payload[0], "base64");
-          const decryptedData = crypto.privateDecrypt(
-            {
-              key: keys.privateKey,
-              padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-              oaepHash: "sha256"
-            },
-            encryptedData
-          );
+          
+          // convert payload of base64 encrypted strings to an array of encrypted buffers
+          const encryptedData = payload.map(function(b64) { return Buffer.from(b64, "base64"); } );
+          
+          // decrypt each encrypted buffer into an array of decrypted buffers
+          const decryptedBuffers = encryptedData.map(
+            
+            function (encryptedBuffer) {
+                
+                return crypto.privateDecrypt(
+                  {
+                    key: keys.privateKey,
+                    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                    oaepHash: "sha256"
+                  },
+                  encryptedBuffer
+                );
+              
+            }
+           );
+          // concatenate the array of decrypted buffers into a single decrypted buffer
+          const decryptedData = Buffer.concat(decryptedBuffers);
+          
+          // inflate / parse via JSON
           return JSON.parse(zlib.inflateSync(decryptedData));
         }
       } catch (ouch) {
