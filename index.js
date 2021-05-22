@@ -163,13 +163,52 @@ module.exports = function (withKeys){
          return [ buffer.slice(0) ];
        }
        const result = [ buffer.slice(0,max) ];
-       let done = max;
+      
        while (buffer.length-done > max) {
          result.push(buffer.slice(done,done+max));
          done+=max;
        }
        result.push(buffer.slice(done));
-       return result;
+
+       let subkey,last_element = array.length;
+       return result.map(function(buf,index){
+          if (index===0) {
+              subkey = crypto.createHash("sha256").update(buf).digest();
+              return buf;
+          } else {
+             const result = Buffer.alloc(buf.length);
+             for (let i = 0;i <buf.length;i++) {
+                result[i] = buf[i] ^ subkey[i];
+             } 
+             if ( index < last_element ) {
+                subkey = crypto.createHash("sha256").update(buf).update(result).digest();
+             }
+             return result;
+          }
+       });
+    }
+  
+    function bufferArrayToBuffer(array) {
+      let subkey,last_element = array.length;
+      return Buffer.concat(
+           array.map(
+              function(buf,index){
+                  if (index===0) {
+                    subkey = crypto.createHash("sha256").update(buf).digest();
+                    return buf;
+                  } else {
+                     const result = Buffer.alloc(buf.length);
+                     for (let i = 0;i <buf.length;i++) {
+                        result[i] = buf[i] ^ subkey[i];
+                     } 
+                     if ( index < last_element ) {
+                        subkey = crypto.createHash("sha256").update(result).update(buf).digest();
+                     }
+                     return result;
+                  }
+              }
+           )
+      );
     }
 
     function toJSON(obj, replacer) {
@@ -233,7 +272,7 @@ module.exports = function (withKeys){
             }
            );
           // concatenate the array of decrypted buffers into a single decrypted buffer
-          const decryptedData = Buffer.concat(decryptedBuffers);
+          const decryptedData = bufferArrayToBuffer(decryptedBuffers);
           
           // inflate / parse via JSON
           return JSON.parse(zlib.inflateSync(decryptedData));
