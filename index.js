@@ -211,7 +211,7 @@ module.exports = function (withKeys){
     function fromJSON(json) {
       try {
         const payload = JSON.parse(json);
-        if (Array.isArray(payload) && payload.length===1) {
+        if (Array.isArray(payload)) {
           
           // convert payload of base64 encrypted strings to an array of encrypted buffers
           const encryptedData = payload.map(function(b64) { return Buffer.from(b64, "base64"); } );
