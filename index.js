@@ -6,9 +6,7 @@ module.exports = function (withKeys){
     const toZlibB64 = (x)=>zlib.deflateSync(Buffer.from(x,'utf8'),{level:9,memLevel:9}).toString('base64').replace(/\=/g,'');
     const fromZlibB64 = (x) => zlib.inflateSync(Buffer.from(x,'base64')).toString('utf8');
   
-    const MAX_INSECURE_LENGTH = 4096;
-    
-    //keys will live in here
+     //keys will live in here
     const keys = {};
 
     // generate 64 bytes of base64(ish) chars (eg no / or +)
@@ -106,6 +104,49 @@ module.exports = function (withKeys){
        const buf = Buffer.alloc(256);
        return crypto.randomFillSync(buf).toString('base64').replace(/\/|\+|=/g,'').substr(-64);
     }
+  
+    function getMaxLength() {
+      
+        if (getMaxLength.cache) return getMaxLength.cache;
+      
+        let safe = 16,delta;
+        console.log("determining max encyption length");
+        while (true) {
+            const attempt = safe + delta ? delta : safe;
+            try  {
+             
+                crypto.publicEncrypt(
+                    {
+                      key: keys.publicKey,
+                      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                      oaepHash: "sha256"
+                    },
+
+                    Buffer.from(new Array(attempt+1).join('x'))
+
+                  }
+                  
+                  safe = attempt;
+                  
+              } catch (e) {
+                  
+                 if ( delta ) {
+                    if (delta <= 2) {
+                        console.log("determined safe max:",safe);
+                        getMaxLength.cache = safe;
+                        return safe;
+                    } else {
+                       delta = Math.ceil(delta / 2); 
+                       console.log("hit upper limit:",attempt, "restarting from",safe,"next delta will be",delta);
+                    }
+                 } else {
+                    delta = Math.ceil(safe / 2); 
+                    console.log("hit first upper limit:",attempt,  "restarting from",safe, "delta will be",delta);
+                 }
+              }
+          
+        }
+    }
 
     function setKeyPair(pub, priv, pass) {
       importKeys.publicKey(pub);
@@ -133,7 +174,7 @@ module.exports = function (withKeys){
 
     function toJSON(obj, replacer) {
       const insecure = zlib.deflateSync(Buffer.from(JSON.stringify(obj,replacer)),{level:9,memLevel:9});
-      
+      const MAX_INSECURE_LENGTH =  getMaxLength();
       if (insecure.length <= MAX_INSECURE_LENGTH) {
             const encryptedData = crypto.publicEncrypt(
             {
