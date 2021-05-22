@@ -5,7 +5,9 @@ module.exports = function (withKeys){
     const zlib=require('zlib');
     const toZlibB64 = (x)=>zlib.deflateSync(Buffer.from(x,'utf8'),{level:9,memLevel:9}).toString('base64').replace(/\=/g,'');
     const fromZlibB64 = (x) => zlib.inflateSync(Buffer.from(x,'base64')).toString('utf8');
-
+  
+    const MAX_INSECURE_LENGTH = 4096;
+    
     //keys will live in here
     const keys = {};
 
@@ -114,18 +116,55 @@ module.exports = function (withKeys){
       exportedKeys.passphrase = pass;
       exportedKeys.keys = toZlibB64(JSON.stringify([fromZlibB64(pub),fromZlibB64(priv),passphrase]));
     }
+  
+    function bufferToBufferArray(buffer,max) {
+       if (buffer.length<max) {
+         return [ buffer.slice(0) ];
+       }
+       const result = [ buffer.slice(0,max) ];
+       let done = max;
+       while (buffer.length-done > max) {
+         result.push(buffer.slice(done,done+max));
+         done+=max;
+       }
+       result.push(buffer.slice(done));
+       return result;
+    }
 
     function toJSON(obj, replacer) {
       const insecure = zlib.deflateSync(Buffer.from(JSON.stringify(obj,replacer)),{level:9,memLevel:9});
-      const encryptedData = crypto.publicEncrypt(
-        {
-          key: keys.publicKey,
-          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-          oaepHash: "sha256"
-        },
-        insecure
+      
+      if (insecure.length <= MAX_INSECURE_LENGTH) {
+            const encryptedData = crypto.publicEncrypt(
+            {
+              key: keys.publicKey,
+              padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+              oaepHash: "sha256"
+            },
+            insecure
+          );
+          return '["'+encryptedData.toString("base64").replace(/\=/g,'')+'"]'; 
+      }
+      
+      const insecureBuffers = bufferToBufferArray(insecure,MAX_INSECURE_LENGTH);
+      const encryptedBuffers = unencryptedBuffers.map(
+        function(insecureData) {
+           return crypto.publicEncrypt(
+            {
+              key: keys.publicKey,
+              padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+              oaepHash: "sha256"
+            },
+            insecureData
+          );
+        }
       );
-      return '["'+encryptedData.toString("base64").replace(/\=/g,'')+'"]';
+      const base64Buffers = encryptedBuffers.map(
+         function(encryptedData) {
+           return encryptedData.toString("base64").replace(/\=/g,'');
+         }
+      );
+      return JSON.stringify(base64Buffers);
     }
 
     function fromJSON(json) {
