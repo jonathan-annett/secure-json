@@ -124,7 +124,7 @@ module.exports = function (withKeys){
 
                     Buffer.from(new Array(attempt+1).join('x'))
 
-                  }
+                  );
                   
                   safe = attempt;
                   
