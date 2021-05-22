@@ -147,7 +147,7 @@ module.exports = function (withKeys){
       }
       
       const insecureBuffers = bufferToBufferArray(insecure,MAX_INSECURE_LENGTH);
-      const encryptedBuffers = unencryptedBuffers.map(
+      const encryptedBuffers = insecureBuffers.map(
         function(insecureData) {
            return crypto.publicEncrypt(
             {
