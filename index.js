@@ -163,14 +163,14 @@ module.exports = function (withKeys){
          return [ buffer.slice(0) ];
        }
        const result = [ buffer.slice(0,max) ];
-      
+       done = max;
        while (buffer.length-done > max) {
          result.push(buffer.slice(done,done+max));
          done+=max;
        }
        result.push(buffer.slice(done));
 
-       let subkey,last_element = array.length;
+       let subkey,last_element = result.length;
        return result.map(function(buf,index){
           if (index===0) {
               subkey = crypto.createHash("sha256").update(buf).digest();
@@ -178,10 +178,10 @@ module.exports = function (withKeys){
           } else {
              const result = Buffer.alloc(buf.length);
              for (let i = 0;i <buf.length;i++) {
-                result[i] = buf[i] ^ subkey[i];
+                result[i] = buf[i] ^ subkey[i % subkey.length];
              } 
              if ( index < last_element ) {
-                subkey = crypto.createHash("sha256").update(buf).update(result).digest();
+                subkey = crypto.createHash("sha256").update(buf).digest();
              }
              return result;
           }
@@ -199,10 +199,10 @@ module.exports = function (withKeys){
                   } else {
                      const result = Buffer.alloc(buf.length);
                      for (let i = 0;i <buf.length;i++) {
-                        result[i] = buf[i] ^ subkey[i];
+                        result[i] = buf[i] ^ subkey[i % subkey.length];
                      } 
                      if ( index < last_element ) {
-                        subkey = crypto.createHash("sha256").update(result).update(buf).digest();
+                        subkey = crypto.createHash("sha256").update(result).digest();
                      }
                      return result;
                   }
