@@ -114,7 +114,6 @@ module.exports = function (withKeys){
         while (true) {
             const attempt = safe + (delta ? delta : safe);
             try  {
-                console.log("trying",attempt);
                 crypto.publicEncrypt(
                     {
                       key: keys.publicKey,
@@ -132,16 +131,13 @@ module.exports = function (withKeys){
                   
                  if ( delta ) {
                     if (delta <= 2) {
-                        console.log("determined safe max:",safe);
                         getMaxLength.cache = safe;
                         return safe;
                     } else {
                        delta = Math.ceil(delta / 2); 
-                       console.log("hit upper limit:",attempt, "restarting from",safe,"next delta will be",delta);
                     }
                  } else {
                     delta = Math.ceil(safe / 2); 
-                    console.log("hit first upper limit:",attempt,  "restarting from",safe, "delta will be",delta);
                  }
               }
           
