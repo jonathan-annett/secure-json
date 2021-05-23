@@ -110,7 +110,6 @@ module.exports = function (withKeys){
         if (getMaxLength.cache) return getMaxLength.cache;
       
         let safe = 16,delta;
-        console.log("determining max encryption length");
         while (true) {
             const attempt = safe + (delta ? delta : safe);
             try  {
